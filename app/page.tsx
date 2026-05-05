@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { Bot, Zap, Shield, ShoppingCart, Settings, ArrowRight, Check, Github, Sparkles } from 'lucide-react'
 import { NeoButton } from '@/components/ui/neo-button'
-import { NeoCard, NeoCardContent } from '@/components/ui/neo-card'
 
 const features = [
   {
