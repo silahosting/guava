@@ -32,7 +32,6 @@ export async function registerAction(formData: FormData) {
     name,
     email,
     password: hashedPassword,
-    role: 'user', // Default: user biasa, bukan admin
   })
 
   if (!user) {
@@ -61,8 +60,8 @@ export async function loginAction(formData: FormData) {
     return { error: 'Email atau password salah' }
   }
 
-  await createSession(user.id, user.role)
-  redirect(user.role === 'admin' ? '/admin/settings' : '/dashboard')
+  await createSession(user.id)
+  redirect('/dashboard')
 }
 
 export async function logoutAction() {

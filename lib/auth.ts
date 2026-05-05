@@ -20,10 +20,10 @@ export async function verifyPassword(password: string, hashedPassword: string): 
   return hashed === hashedPassword
 }
 
-export async function createSession(userId: string, role: 'admin' | 'user' = 'user'): Promise<void> {
+export async function createSession(userId: string): Promise<void> {
   const cookieStore = await cookies()
   // Simple session token - in production use JWT or encrypted session
-  const sessionToken = Buffer.from(JSON.stringify({ userId, role, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 })).toString('base64')
+  const sessionToken = Buffer.from(JSON.stringify({ userId, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 })).toString('base64')
   
   cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
     httpOnly: true,
