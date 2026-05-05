@@ -21,22 +21,17 @@ export async function verifyPassword(password: string, hashedPassword: string): 
 }
 
 export async function createSession(userId: string): Promise<void> {
-  try {
-    const cookieStore = await cookies()
-    // Simple session token - in production use JWT or encrypted session
-    const sessionToken = Buffer.from(JSON.stringify({ userId, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 })).toString('base64')
-    
-    cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-      path: '/',
-    })
-  } catch (error) {
-    console.error('[v0] Error creating session:', error)
-    throw error
-  }
+  const cookieStore = await cookies()
+  // Simple session token - in production use JWT or encrypted session
+  const sessionToken = Buffer.from(JSON.stringify({ userId, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 })).toString('base64')
+  
+  cookieStore.set(SESSION_COOKIE_NAME, sessionToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60, // 7 days
+    path: '/',
+  })
 }
 
 export async function getSession(): Promise<SessionUser | null> {
@@ -53,47 +48,15 @@ export async function getSession(): Promise<SessionUser | null> {
       return null
     }
 
-    // Add retry logic with timeout for database calls
-    const user = await getUserByIdWithRetry(session.userId)
+    const user = await getUserById(session.userId)
     if (!user) return null
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...sessionUser } = user
     return sessionUser
   } catch {
-    // Session parsing failed - return null silently
     return null
   }
-}
-
-// Retry logic for database calls
-async function getUserByIdWithRetry(userId: string, maxRetries = 2): Promise<any> {
-  let lastError: Error | null = null
-  
-  for (let i = 0; i <= maxRetries; i++) {
-    try {
-      // Set timeout for database call
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
-      
-      const userPromise = getUserById(userId)
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Database timeout')), 5000)
-      })
-      
-      const result = await Promise.race([userPromise, timeoutPromise])
-      clearTimeout(timeoutId)
-      return result
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error))
-      if (i < maxRetries) {
-        // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 100 * (i + 1)))
-      }
-    }
-  }
-  
-  throw lastError
 }
 
 export async function destroySession(): Promise<void> {

@@ -1,32 +1,15 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
 
-function isRedirectError(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null || !('digest' in error)) {
-    return false
-  }
-  const digest = (error as any).digest
-  return typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')
-}
-
 export default async function AuthLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  try {
-    const session = await getSession()
-    
-    if (session) {
-      redirect('/dashboard')
-    }
-  } catch (error) {
-    // Re-throw redirect errors - they should not be caught
-    if (isRedirectError(error)) {
-      throw error
-    }
-    console.error('Error checking session in auth layout:', error)
-    // Continue to show login page if session check fails
+  const session = await getSession()
+  
+  if (session) {
+    redirect('/dashboard')
   }
 
   return (

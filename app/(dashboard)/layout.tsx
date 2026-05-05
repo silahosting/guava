@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/dashboard/Sidebar'
 import { Navbar } from '@/components/dashboard/Navbar'
@@ -16,38 +16,24 @@ export default function DashboardLayout({
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  const fetchUser = useCallback(async () => {
-    try {
-      const res = await fetch('/api/auth/me', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        cache: 'no-store'
-      })
-      
-      if (res.ok) {
-        const data = await res.json()
-        setUser(data.user)
-        // If user is admin, redirect to admin dashboard
-        if (data.user.role === 'admin') {
-          router.push('/admin')
-        }
-      } else {
-        // 401 or other error - redirect to login silently
-        router.push('/login')
-      }
-    } catch {
-      // Network error - redirect to login silently
-      router.push('/login')
-    } finally {
-      setLoading(false)
-    }
-  }, [router])
-
   useEffect(() => {
+    async function fetchUser() {
+      try {
+        const res = await fetch('/api/auth/me')
+        if (res.ok) {
+          const data = await res.json()
+          setUser(data.user)
+        } else {
+          router.push('/login')
+        }
+      } catch {
+        router.push('/login')
+      } finally {
+        setLoading(false)
+      }
+    }
     fetchUser()
-  }, [fetchUser])
+  }, [router])
 
   if (loading) {
     return (

@@ -17,6 +17,24 @@ export const metadata: Metadata = {
   title: 'SewaBot - Platform Bot Auto Order',
   description: 'Buat bot Telegram sendiri untuk menerima pesanan otomatis. Kelola produk, pantau pesanan, dan tingkatkan penjualan Anda 24/7.',
   keywords: ['bot telegram', 'auto order', 'jualan online', 'bot jualan', 'telegram bot'],
+  authors: [{ name: 'SewaBot' }],
+  icons: {
+    icon: [
+      {
+        url: '/icon-light-32x32.png',
+        media: '(prefers-color-scheme: light)',
+      },
+      {
+        url: '/icon-dark-32x32.png',
+        media: '(prefers-color-scheme: dark)',
+      },
+      {
+        url: '/icon.svg',
+        type: 'image/svg+xml',
+      },
+    ],
+    apple: '/apple-icon.png',
+  },
 }
 
 export const viewport: Viewport = {

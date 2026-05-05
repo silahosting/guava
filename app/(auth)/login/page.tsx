@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useActionState } from 'react'
 import Link from 'next/link'
 import { Bot, Mail, Lock, ArrowRight } from 'lucide-react'
 import { NeoButton } from '@/components/ui/neo-button'
@@ -9,42 +9,13 @@ import { NeoCard, NeoCardHeader, NeoCardTitle, NeoCardDescription, NeoCardConten
 import { loginAction } from '@/actions/auth.actions'
 
 export default function LoginPage() {
-  const [error, setError] = useState<string | null>(null)
-  const [isPending, setIsPending] = useState(false)
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setError(null)
-    setIsPending(true)
-
-    try {
-      const formData = new FormData(e.currentTarget)
+  const [state, formAction, isPending] = useActionState(
+    async (_prevState: { error: string | null }, formData: FormData) => {
       const result = await loginAction(formData)
-      
-      // If we get here, login failed (redirect would have happened)
-      if (result?.error) {
-        setError(result.error)
-      } else {
-        // No result and no redirect means something went wrong
-        setError('Terjadi kesalahan. Silakan coba lagi.')
-      }
-    } catch (err: unknown) {
-      // NEXT_REDIRECT is thrown by server actions on redirect - re-throw it
-      if (err instanceof Error && err.message.includes('NEXT_REDIRECT')) {
-        throw err
-      }
-      // Check if it's a redirect digest error
-      if (typeof err === 'object' && err !== null && 'digest' in err) {
-        const digest = (err as { digest?: string }).digest
-        if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) {
-          throw err
-        }
-      }
-      setError('Terjadi kesalahan. Silakan coba lagi.')
-    } finally {
-      setIsPending(false)
-    }
-  }
+      return result || { error: null }
+    },
+    { error: null }
+  )
 
   return (
     <NeoCard className="bg-card/80 backdrop-blur-xl">
@@ -59,10 +30,10 @@ export default function LoginPage() {
       </NeoCardHeader>
       
       <NeoCardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {error && (
+        <form action={formAction} className="flex flex-col gap-4">
+          {state?.error && (
             <div className="bg-destructive/10 text-destructive p-3 rounded-lg border border-destructive/20 text-sm font-medium">
-              {error}
+              {state.error}
             </div>
           )}
           
@@ -79,7 +50,6 @@ export default function LoginPage() {
                 placeholder="email@example.com"
                 className="pl-11"
                 required
-                disabled={isPending}
               />
             </div>
           </div>
@@ -97,7 +67,6 @@ export default function LoginPage() {
                 placeholder="Password"
                 className="pl-11"
                 required
-                disabled={isPending}
               />
             </div>
           </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useActionState } from 'react'
 import Link from 'next/link'
 import { Bot, Mail, Lock, User, ArrowRight } from 'lucide-react'
 import { NeoButton } from '@/components/ui/neo-button'
@@ -9,33 +9,13 @@ import { NeoCard, NeoCardHeader, NeoCardTitle, NeoCardDescription, NeoCardConten
 import { registerAction } from '@/actions/auth.actions'
 
 export default function RegisterPage() {
-  const [error, setError] = useState<string | null>(null)
-  const [isPending, setIsPending] = useState(false)
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setError(null)
-    setIsPending(true)
-
-    try {
-      const formData = new FormData(e.currentTarget)
-      console.log('[v0] Submitting register form...')
-      
+  const [state, formAction, isPending] = useActionState(
+    async (_prevState: { error: string | null }, formData: FormData) => {
       const result = await registerAction(formData)
-      
-      if (result?.error) {
-        setError(result.error)
-        console.log('[v0] Register error:', result.error)
-      }
-    } catch (err) {
-      console.error('[v0] Register caught error:', err)
-      if (!(err instanceof Error && err.message.includes('NEXT_REDIRECT'))) {
-        setError('Terjadi kesalahan. Silakan coba lagi.')
-      }
-    } finally {
-      setIsPending(false)
-    }
-  }
+      return result || { error: null }
+    },
+    { error: null }
+  )
 
   return (
     <NeoCard className="bg-card">
@@ -50,10 +30,10 @@ export default function RegisterPage() {
       </NeoCardHeader>
       
       <NeoCardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {error && (
+        <form action={formAction} className="flex flex-col gap-4">
+          {state?.error && (
             <div className="bg-destructive text-destructive-foreground p-3 neo-border-2 text-sm font-medium">
-              {error}
+              {state.error}
             </div>
           )}
           
@@ -70,7 +50,6 @@ export default function RegisterPage() {
                 placeholder="John Doe"
                 className="pl-11"
                 required
-                disabled={isPending}
               />
             </div>
           </div>
@@ -88,7 +67,6 @@ export default function RegisterPage() {
                 placeholder="email@example.com"
                 className="pl-11"
                 required
-                disabled={isPending}
               />
             </div>
           </div>
@@ -107,7 +85,6 @@ export default function RegisterPage() {
                 className="pl-11"
                 required
                 minLength={6}
-                disabled={isPending}
               />
             </div>
           </div>
@@ -126,7 +103,6 @@ export default function RegisterPage() {
                 className="pl-11"
                 required
                 minLength={6}
-                disabled={isPending}
               />
             </div>
           </div>

@@ -31,6 +31,26 @@ export interface MidtransPaymentStatus {
 
 const MIDTRANS_API_BASE = 'https://app.sandbox.midtrans.com/api/v1'
 
+export interface MidtransConfig {
+  serverKey: string
+  clientKey: string
+  merchantId: string
+  isActive: boolean
+}
+
+export function getMidtransConfig(
+  serverKey: string,
+  clientKey: string,
+  merchantId: string
+): MidtransConfig {
+  return {
+    serverKey,
+    clientKey,
+    merchantId,
+    isActive: !!(serverKey && clientKey && merchantId),
+  }
+}
+
 export async function createMidtransQrisPayment(
   amount: number,
   description: string,
@@ -79,8 +99,7 @@ export async function createMidtransQrisPayment(
     }
 
     // Extract QRIS data
-    const qrisAction = data.actions?.find((a: any) => a?.name === 'generate-qr-code')
-    const qrString = qrisAction?.url || ''
+    const qrString = data.actions?.find((a: any) => a.name === 'generate-qr-code')?.url || ''
     const expiresAt = data.expiry_time || new Date(Date.now() + 15 * 60000).toISOString()
 
     return {
