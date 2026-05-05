@@ -79,7 +79,8 @@ export async function createMidtransQrisPayment(
     }
 
     // Extract QRIS data
-    const qrString = data.actions?.find((a: any) => a.name === 'generate-qr-code')?.url || ''
+    const qrisAction = data.actions?.find((a: any) => a?.name === 'generate-qr-code')
+    const qrString = qrisAction?.url || ''
     const expiresAt = data.expiry_time || new Date(Date.now() + 15 * 60000).toISOString()
 
     return {
