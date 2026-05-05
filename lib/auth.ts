@@ -40,50 +40,21 @@ export async function getSession(): Promise<SessionUser | null> {
 
   if (!sessionToken) return null
 
-  let session: { userId: string; exp: number } | null = null
-
   try {
-    session = JSON.parse(Buffer.from(sessionToken, 'base64').toString('utf-8'))
-  } catch (error) {
-    console.error('[v0] Failed to decode session token:', error)
-    // Invalid token format - destroy it to prevent redirect loop
-    try {
+    const session = JSON.parse(Buffer.from(sessionToken, 'base64').toString('utf-8'))
+    
+    if (session.exp < Date.now()) {
       await destroySession()
-    } catch {}
-    return null
-  }
-
-  if (!session || !session.userId || !session.exp) {
-    try {
-      await destroySession()
-    } catch {}
-    return null
-  }
-
-  if (session.exp < Date.now()) {
-    try {
-      await destroySession()
-    } catch {}
-    return null
-  }
-
-  try {
-    const user = await getUserById(session.userId)
-    if (!user) {
-      // User no longer exists - destroy stale session
-      try {
-        await destroySession()
-      } catch {}
       return null
     }
+
+    const user = await getUserById(session.userId)
+    if (!user) return null
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...sessionUser } = user
     return sessionUser
-  } catch (error) {
-    console.error('[v0] Failed to fetch user from database:', error)
-    // Don't destroy session here - DB might be temporarily down
-    // Return null so caller can decide what to do
+  } catch {
     return null
   }
 }
