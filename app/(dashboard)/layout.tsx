@@ -33,15 +33,12 @@ export default function DashboardLayout({
         if (data.user.role === 'admin') {
           router.push('/admin')
         }
-      } else if (res.status === 401) {
-        // Unauthorized - redirect to login
-        router.push('/login')
       } else {
-        // Other error - still redirect to login
+        // 401 or other error - redirect to login silently
         router.push('/login')
       }
-    } catch (error) {
-      console.error('[v0] Error fetching user:', error)
+    } catch {
+      // Network error - redirect to login silently
       router.push('/login')
     } finally {
       setLoading(false)

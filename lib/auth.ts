@@ -60,8 +60,8 @@ export async function getSession(): Promise<SessionUser | null> {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...sessionUser } = user
     return sessionUser
-  } catch (error) {
-    console.error('[v0] Session error:', error)
+  } catch {
+    // Session parsing failed - return null silently
     return null
   }
 }
