@@ -1,3 +1,5 @@
+'use dynamic'
+
 import { Users, BarChart3, Settings, CreditCard } from 'lucide-react'
 import { getUsers } from '@/lib/github-db'
 import { NeoCard, NeoCardHeader, NeoCardTitle, NeoCardContent } from '@/components/ui/neo-card'

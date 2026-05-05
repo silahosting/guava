@@ -1,3 +1,5 @@
+'use dynamic'
+
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth'
 import { Sidebar } from '@/components/dashboard/Sidebar'
