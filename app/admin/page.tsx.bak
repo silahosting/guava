@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic'
+'use dynamic'
 
 import { Users, BarChart3, Settings, CreditCard } from 'lucide-react'
 import { getUsers } from '@/lib/github-db'
