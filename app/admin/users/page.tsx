@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Shield, User, Mail, Calendar, Toggle2, Loader } from 'lucide-react'
+import { Shield, User, Mail, Calendar, ToggleLeft, Loader } from 'lucide-react'
 import { NeoCard } from '@/components/ui/neo-card'
 import { NeoButton } from '@/components/ui/neo-button'
 import { NeoBadge } from '@/components/ui/neo-badge'
@@ -120,7 +120,7 @@ export default function AdminUsersPage() {
                       <Loader className="w-4 h-4 animate-spin" />
                     ) : (
                       <>
-                        <Toggle2 className="w-4 h-4" />
+                        <ToggleLeft className="w-4 h-4" />
                         {user.role === 'admin' ? 'Remove Admin' : 'Make Admin'}
                       </>
                     )}
