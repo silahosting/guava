@@ -35,10 +35,10 @@ const features = [
 ]
 
 const steps = [
-  { number: '01', title: 'Daftar Akun', description: 'Buat akun gratis dalam hitungan detik', color: 'primary' },
-  { number: '02', title: 'Setup Bot', description: 'Masukkan token bot dari BotFather', color: 'secondary' },
-  { number: '03', title: 'Tambah Produk', description: 'Upload produk yang ingin dijual', color: 'accent' },
-  { number: '04', title: 'Mulai Jualan', description: 'Bot siap menerima pesanan otomatis', color: 'success' },
+  { number: '01', title: 'Daftar Akun', description: 'Buat akun gratis dalam hitungan detik', color: 'primary', gradientClass: 'from-primary/20 to-primary/5', borderClass: 'border-primary/20', textClass: 'text-primary/30' },
+  { number: '02', title: 'Setup Bot', description: 'Masukkan token bot dari BotFather', color: 'secondary', gradientClass: 'from-secondary/20 to-secondary/5', borderClass: 'border-secondary/20', textClass: 'text-secondary/30' },
+  { number: '03', title: 'Tambah Produk', description: 'Upload produk yang ingin dijual', color: 'accent', gradientClass: 'from-accent/20 to-accent/5', borderClass: 'border-accent/20', textClass: 'text-accent/30' },
+  { number: '04', title: 'Mulai Jualan', description: 'Bot siap menerima pesanan otomatis', color: 'success', gradientClass: 'from-success/20 to-success/5', borderClass: 'border-success/20', textClass: 'text-success/30' },
 ]
 
 export default function LandingPage() {
@@ -204,8 +204,8 @@ export default function LandingPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {steps.map((step, index) => (
               <div key={index} className="relative">
-                <div className={`bg-gradient-to-br from-${step.color}/20 to-${step.color}/5 rounded-2xl p-6 border border-${step.color}/20 h-full`}>
-                  <span className={`text-5xl font-bold text-${step.color}/30`}>{step.number}</span>
+                <div className={`bg-gradient-to-br ${step.gradientClass} rounded-2xl p-6 border ${step.borderClass} h-full`}>
+                  <span className={`text-5xl font-bold ${step.textClass}`}>{step.number}</span>
                   <h3 className="font-semibold text-lg mt-2">{step.title}</h3>
                   <p className="text-sm text-muted-foreground mt-1">{step.description}</p>
                 </div>

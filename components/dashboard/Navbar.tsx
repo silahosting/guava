@@ -33,7 +33,7 @@ export function Navbar({ user, onMenuClick }: NavbarProps) {
         </button>
         
         <div className="w-10 h-10 bg-gradient-to-br from-secondary to-secondary/70 rounded-xl flex items-center justify-center font-semibold text-secondary-foreground shadow-lg">
-          {user.name.charAt(0).toUpperCase()}
+          {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
         </div>
       </div>
     </header>
