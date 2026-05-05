@@ -10,7 +10,7 @@ export default async function AdminDashboard() {
   const users = await getUsers()
   const totalUsers = users.length
   const adminUsers = users.filter(u => u.role === 'admin').length
-  const regularUsers = users.filter(u => u.role === 'user').length
+  const regularUsers = users.filter(u => !u.role || u.role === 'user').length
 
   return (
     <div className="flex flex-col gap-6">
