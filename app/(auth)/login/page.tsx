@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Bot, Mail, Lock, ArrowRight } from 'lucide-react'
 import { NeoButton } from '@/components/ui/neo-button'
@@ -12,7 +11,6 @@ import { loginAction } from '@/actions/auth.actions'
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [isPending, setIsPending] = useState(false)
-  const router = useRouter()
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -21,25 +19,28 @@ export default function LoginPage() {
 
     try {
       const formData = new FormData(e.currentTarget)
-      console.log('[v0] Submitting login form...')
-      
       const result = await loginAction(formData)
       
       // If we get here, login failed (redirect would have happened)
       if (result?.error) {
         setError(result.error)
-        console.log('[v0] Login error:', result.error)
       } else {
         // No result and no redirect means something went wrong
         setError('Terjadi kesalahan. Silakan coba lagi.')
-        console.log('[v0] Unexpected login result')
       }
-    } catch (err) {
-      console.error('[v0] Login caught error:', err)
-      // Don't show error for redirect - it's expected
-      if (!(err instanceof Error && err.message.includes('NEXT_REDIRECT'))) {
-        setError('Terjadi kesalahan. Silakan coba lagi.')
+    } catch (err: unknown) {
+      // NEXT_REDIRECT is thrown by server actions on redirect - re-throw it
+      if (err instanceof Error && err.message.includes('NEXT_REDIRECT')) {
+        throw err
       }
+      // Check if it's a redirect digest error
+      if (typeof err === 'object' && err !== null && 'digest' in err) {
+        const digest = (err as { digest?: string }).digest
+        if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) {
+          throw err
+        }
+      }
+      setError('Terjadi kesalahan. Silakan coba lagi.')
     } finally {
       setIsPending(false)
     }
