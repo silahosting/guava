@@ -1,162 +1,176 @@
-import { v4 as uuidv4 } from 'uuid'
+import crypto from 'crypto'
 
-interface MidtransConfig {
-  serverKey: string
-  clientKey: string
+export interface MidtransCreatePaymentResponse {
+  success: boolean
+  error?: string
+  transactionId?: string
+  qrisUrl?: string
+  qrString?: string
+  amount?: number
+  originalAmount?: number
+  fee?: number
+  expiresAt?: string
+}
+
+export interface MidtransCheckPaymentResponse {
+  success: boolean
+  status?: string
+  transactionId?: string
+  error?: string
+  paidAt?: string
+}
+
+export interface MidtransPaymentStatus {
+  transaction_status: string
+  transaction_id: string
+  status_code: string
+  gross_amount: string
+  settlement_time?: string
+  [key: string]: any
+}
+
+const MIDTRANS_API_BASE = 'https://app.sandbox.midtrans.com/api/v1'
+
+export async function createMidtransQrisPayment(
+  amount: number,
+  description: string,
+  clientKey: string,
+  serverKey: string,
   merchantId: string
-  isProduction: boolean
-}
+): Promise<MidtransCreatePaymentResponse> {
+  try {
+    const transactionId = generateTransactionId(merchantId)
+    const fee = generateRandomFee()
+    const totalAmount = amount + fee
 
-interface MidtransTransaction {
-  orderId: string
-  gross_amount: number
-  firstName: string
-  lastName: string
-  email: string
-  phone: string
-}
-
-interface MidtransSnapResponse {
-  token: string
-  redirect_url: string
-}
-
-export class MidtransPayment {
-  private serverKey: string
-  private clientKey: string
-  private merchantId: string
-  private baseUrl: string
-
-  constructor(config: MidtransConfig) {
-    this.serverKey = config.serverKey
-    this.clientKey = config.clientKey
-    this.merchantId = config.merchantId
-    this.baseUrl = config.isProduction
-      ? 'https://app.midtrans.com/snap/v1'
-      : 'https://app.sandbox.midtrans.com/snap/v1'
-  }
-
-  private encodeAuth(): string {
-    return Buffer.from(`${this.serverKey}:`).toString('base64')
-  }
-
-  async createTransaction(
-    data: MidtransTransaction & {
-      itemDetails: Array<{ id: string; price: number; quantity: number; name: string }>
-      customExpiry?: number // minutes
-    }
-  ): Promise<MidtransSnapResponse> {
-    const body = {
-      transaction_details: {
-        order_id: `${this.merchantId}-${data.orderId}`,
-        gross_amount: data.gross_amount,
+    // Create charge with QRIS payment method
+    const response = await fetch(`${MIDTRANS_API_BASE}/charge`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Basic ${Buffer.from(`${serverKey}:`).toString('base64')}`,
       },
-      customer_details: {
-        first_name: data.firstName,
-        last_name: data.lastName,
-        email: data.email,
-        phone: data.phone,
-      },
-      item_details: data.itemDetails,
-      expiry: data.customExpiry
-        ? {
-            unit: 'minute',
-            length: data.customExpiry,
-          }
-        : undefined,
-    }
-
-    try {
-      const response = await fetch(`${this.baseUrl}/transactions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Basic ${this.encodeAuth()}`,
+      body: JSON.stringify({
+        payment_type: 'qris',
+        transaction_details: {
+          order_id: transactionId,
+          gross_amount: totalAmount,
         },
-        body: JSON.stringify(body),
-      })
+        custom_field1: description,
+        custom_field2: merchantId,
+      }),
+    })
 
-      if (!response.ok) {
-        throw new Error(`Midtrans API error: ${response.status}`)
-      }
+    const data = (await response.json()) as any
 
-      const result = await response.json()
+    if (!response.ok) {
+      console.error('[v0] Midtrans Create Payment Error:', data)
       return {
-        token: result.token,
-        redirect_url: result.redirect_url,
+        success: false,
+        error: data.error_description || data.message || 'Failed to create QRIS payment',
+        transactionId: '',
+        qrisUrl: '',
+        qrString: '',
+        amount: totalAmount,
+        originalAmount: amount,
+        fee,
+        expiresAt: '',
       }
-    } catch (error) {
-      throw new Error(`Failed to create Midtrans transaction: ${error}`)
     }
-  }
 
-  async getTransactionStatus(orderId: string): Promise<any> {
-    const fullOrderId = `${this.merchantId}-${orderId}`
-    
-    try {
-      const response = await fetch(`${this.baseUrl}/transactions/${fullOrderId}/status`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Basic ${this.encodeAuth()}`,
-        },
-      })
+    // Extract QRIS data
+    const qrString = data.actions?.find((a: any) => a.name === 'generate-qr-code')?.url || ''
+    const expiresAt = data.expiry_time || new Date(Date.now() + 15 * 60000).toISOString()
 
-      if (!response.ok) {
-        throw new Error(`Midtrans API error: ${response.status}`)
-      }
-
-      return await response.json()
-    } catch (error) {
-      throw new Error(`Failed to get transaction status: ${error}`)
+    return {
+      success: true,
+      transactionId: data.transaction_id,
+      qrisUrl: qrString,
+      qrString: qrString,
+      amount: totalAmount,
+      originalAmount: amount,
+      fee,
+      expiresAt,
     }
-  }
-
-  verifyWebhookSignature(body: any, signature: string): boolean {
-    const crypto = require('crypto')
-    const orderId = body.order_id
-    const statusCode = body.status_code
-    const grossAmount = body.gross_amount
-
-    const signatureKey = crypto
-      .createHash('sha512')
-      .update(`${orderId}${statusCode}${grossAmount}${this.serverKey}`)
-      .digest('hex')
-
-    return signatureKey === signature
-  }
-
-  parseWebhookStatus(status: string): 'pending' | 'paid' | 'failed' | 'expired' {
-    switch (status) {
-      case 'capture':
-      case 'settlement':
-        return 'paid'
-      case 'pending':
-        return 'pending'
-      case 'expire':
-        return 'expired'
-      case 'cancel':
-      case 'deny':
-      case 'failure':
-        return 'failed'
-      default:
-        return 'pending'
+  } catch (error) {
+    console.error('[v0] Midtrans Create Payment Exception:', error)
+    return {
+      success: false,
+      error: `Exception: ${String(error)}`,
+      transactionId: '',
+      qrisUrl: '',
+      qrString: '',
+      amount,
+      originalAmount: amount,
+      fee: 0,
+      expiresAt: '',
     }
   }
 }
 
-export function getMidtransConfig(): MidtransConfig {
-  const serverKey = process.env.MIDTRANS_SERVER_KEY
-  const clientKey = process.env.MIDTRANS_CLIENT_KEY
-  const merchantId = process.env.MIDTRANS_MERCHANT_ID
+export async function checkMidtransPaymentStatus(
+  transactionId: string,
+  serverKey: string
+): Promise<MidtransCheckPaymentResponse> {
+  try {
+    const response = await fetch(`${MIDTRANS_API_BASE}/transactions/${transactionId}/status`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Basic ${Buffer.from(`${serverKey}:`).toString('base64')}`,
+      },
+    })
 
-  if (!serverKey || !clientKey || !merchantId) {
-    throw new Error('Missing Midtrans credentials in environment variables')
-  }
+    const data = (await response.json()) as MidtransPaymentStatus
 
-  return {
-    serverKey,
-    clientKey,
-    merchantId,
-    isProduction: process.env.MIDTRANS_PRODUCTION === 'true',
+    if (!response.ok) {
+      console.error('[v0] Midtrans Check Status Error:', data)
+      return {
+        success: false,
+        status: 'failed',
+        transactionId,
+        error: 'Failed to check payment status',
+      }
+    }
+
+    // Map Midtrans status to simple status
+    let status = 'pending'
+    if (data.transaction_status === 'settlement' || data.transaction_status === 'capture') {
+      status = 'paid'
+    } else if (data.transaction_status === 'pending') {
+      status = 'pending'
+    } else if (
+      data.transaction_status === 'deny' ||
+      data.transaction_status === 'cancel' ||
+      data.transaction_status === 'expire'
+    ) {
+      status = 'failed'
+    }
+
+    return {
+      success: true,
+      status,
+      transactionId: data.transaction_id,
+      paidAt: data.settlement_time,
+    }
+  } catch (error) {
+    console.error('[v0] Midtrans Check Status Exception:', error)
+    return {
+      success: false,
+      status: 'failed',
+      transactionId,
+      error: `Exception: ${String(error)}`,
+    }
   }
+}
+
+function generateTransactionId(merchantId: string): string {
+  const timestamp = Date.now()
+  const random = Math.random().toString(36).substring(2, 8)
+  return `${merchantId}-${timestamp}-${random}`
+}
+
+function generateRandomFee(): number {
+  const fees = [100, 200, 300, 400, 500]
+  return fees[Math.floor(Math.random() * fees.length)]
 }
