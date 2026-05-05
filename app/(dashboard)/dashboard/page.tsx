@@ -33,6 +33,16 @@ const PAYMENT_STATUS = {
   failed: { label: 'Gagal', variant: 'destructive' as const },
 }
 
+const DEFAULT_STATS = {
+  totalProducts: 0,
+  activeProducts: 0,
+  totalOrders: 0,
+  pendingOrders: 0,
+  completedOrders: 0,
+  totalRevenue: 0,
+  isBotActive: false,
+}
+
 export default async function DashboardPage() {
   const session = await getSession()
   
@@ -40,8 +50,22 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  const stats = await getDashboardStats(session.id)
-  const orders = await getOrders(session.id)
+  // Fetch in parallel and tolerate failures so the page never crashes
+  const [statsResult, ordersResult] = await Promise.allSettled([
+    getDashboardStats(session.id),
+    getOrders(session.id),
+  ])
+
+  const stats = statsResult.status === 'fulfilled' ? statsResult.value : DEFAULT_STATS
+  const orders = ordersResult.status === 'fulfilled' ? ordersResult.value : []
+
+  if (statsResult.status === 'rejected') {
+    console.error('[v0] getDashboardStats failed:', statsResult.reason)
+  }
+  if (ordersResult.status === 'rejected') {
+    console.error('[v0] getOrders failed:', ordersResult.reason)
+  }
+
   const recentOrders = orders.slice(-5).reverse()
 
   return (
@@ -163,7 +187,7 @@ export default async function DashboardPage() {
                             : 'default'
                         }
                       >
-                        {ORDER_STATUS[order.status].label}
+                        {ORDER_STATUS[order.status]?.label ?? order.status}
                       </NeoBadge>
                     </div>
                   </Link>
