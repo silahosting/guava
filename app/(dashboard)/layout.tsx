@@ -23,6 +23,10 @@ export default function DashboardLayout({
         if (res.ok) {
           const data = await res.json()
           setUser(data.user)
+          // If user is admin, redirect to admin dashboard
+          if (data.user.role === 'admin') {
+            router.push('/admin')
+          }
         } else {
           router.push('/login')
         }

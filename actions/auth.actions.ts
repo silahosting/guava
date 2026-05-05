@@ -32,6 +32,7 @@ export async function registerAction(formData: FormData) {
     name,
     email,
     password: hashedPassword,
+    role: 'user', // Default new users to 'user' role
   })
 
   if (!user) {
@@ -61,7 +62,8 @@ export async function loginAction(formData: FormData) {
   }
 
   await createSession(user.id)
-  redirect('/dashboard')
+  // Route based on user role
+  redirect(user.role === 'admin' ? '/admin' : '/dashboard')
 }
 
 export async function logoutAction() {
