@@ -11,6 +11,13 @@ const defaultDatabase: Database = {
 }
 
 const API_BASE = "https://api-orkut-iota-seven.vercel.app" // ganti dengan URL API kamu
+const CACHE_TTL = 30000 // Cache for 30 seconds
+let cachedDatabase: Database | null = null
+let cacheTimestamp = 0
+
+function isCacheValid(): boolean {
+  return Date.now() - cacheTimestamp < CACHE_TTL && cachedDatabase !== null
+}
 
 // Tidak perlu lagi — token ditangani di server
 async function getGitHubHeaders() {
@@ -20,20 +27,33 @@ async function getGitHubHeaders() {
 }
 
 async function getFileContent(): Promise<{ content: Database; sha: string | null }> {
-  // Tidak perlu cek token/owner/repo — server yang handle
+  // Return cached data if valid
+  if (isCacheValid() && cachedDatabase) {
+    return { content: cachedDatabase, sha: null }
+  }
+
   try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 8000) // 8 second timeout
+
     const response = await fetch(`${API_BASE}/api/database`, {
       headers: await getGitHubHeaders(),
       cache: 'no-store',
+      signal: controller.signal,
     })
+
+    clearTimeout(timeoutId)
 
     if (!response.ok) {
       console.error('API error:', response.status, await response.text())
+      // Return cached data if available, even if expired
+      if (cachedDatabase) {
+        return { content: cachedDatabase, sha: null }
+      }
       return { content: defaultDatabase, sha: null }
     }
 
-    // Server sudah handle 404 + auto createFile di dalamnya
-    const data = await response.json() // { content, sha }
+    const data = await response.json()
     
     // Ensure all arrays exist with proper defaults
     const content: Database = {
@@ -45,9 +65,17 @@ async function getFileContent(): Promise<{ content: Database; sha: string | null
       payments: Array.isArray(data.content?.payments) ? data.content.payments : [],
     }
     
+    // Update cache
+    cachedDatabase = content
+    cacheTimestamp = Date.now()
+    
     return { content, sha: data.sha || null }
   } catch (error) {
     console.error('Error fetching database:', error)
+    // Return cached data if available during error
+    if (cachedDatabase) {
+      return { content: cachedDatabase, sha: null }
+    }
     return { content: defaultDatabase, sha: null }
   }
 }
@@ -71,16 +99,26 @@ async function createFile(): Promise<void> {
 async function updateFile(database: Database, sha: string | null): Promise<boolean> {
   // Tidak perlu cek token/owner/repo — server yang handle
   try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 8000) // 8 second timeout
+
     const response = await fetch(`${API_BASE}/api/database`, {
       method: 'PUT',
       headers: await getGitHubHeaders(),
       body: JSON.stringify({ database, sha }),
+      signal: controller.signal,
     })
+
+    clearTimeout(timeoutId)
 
     if (!response.ok) {
       console.error('API error saat update:', response.status, await response.text())
       return false
     }
+
+    // Update cache on successful write
+    cachedDatabase = database
+    cacheTimestamp = Date.now()
 
     return true
   } catch (error) {
